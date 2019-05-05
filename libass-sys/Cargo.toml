@@ -1,0 +1,15 @@
+[package]
+name = "libass-sys"
+version = "0.1.0"
+authors = ["Tadeo Kondrak <me@tadeo.ca>"]
+edition = "2018"
+build = "build.rs"
+description = "Raw bindings for libass"
+license = "ISC"
+repository = "https://github.com/tadeokondrak/libass-rs"
+categories = [ "external-ffi-bindings" ]
+
+[dependencies]
+
+[build-dependencies]
+bindgen = "0.49.0"
