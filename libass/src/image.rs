@@ -7,25 +7,25 @@ pub enum ImageKind {
     Shadow,
 }
 
-#[derive(Debug, Copy, Clone)]
-pub struct Image(*mut libass_sys::ass_image);
+pub struct Image<'renderer>(Option<&'renderer mut libass_sys::ass_image>);
 
-impl Image {
-    pub(crate) fn new(ptr: *mut libass_sys::ass_image) -> Self {
-        Image(ptr)
+impl<'renderer> Image<'renderer> {
+    pub(crate) fn new(image: &'renderer mut libass_sys::ass_image) -> Self {
+        Image(Some(image))
     }
 }
 
-impl Iterator for Image {
+impl<'renderer> Iterator for Image<'renderer> {
     type Item = Layer;
     fn next(&mut self) -> Option<Layer> {
-        if self.0.is_null() {
-            return None;
+        let c_layer: &libass_sys::ass_image;
+
+        match &self.0 {
+            Some(layer) => { c_layer = &*layer },
+            None => { return None },
         }
 
-        let c_layer = unsafe { &*self.0 };
-
-        self.0 = c_layer.next;
+        if c_layer.next.is_null() {}
 
         let width = c_layer.w;
         let height = c_layer.h;
