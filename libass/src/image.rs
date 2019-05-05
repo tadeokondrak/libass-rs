@@ -18,14 +18,11 @@ impl<'renderer> Image<'renderer> {
 impl<'renderer> Iterator for Image<'renderer> {
     type Item = Layer;
     fn next(&mut self) -> Option<Layer> {
-        let c_layer: &libass_sys::ass_image;
-
-        match &self.0 {
-            Some(layer) => { c_layer = &*layer },
-            None => { return None },
+        if self.0.is_none() {
+            return None
         }
 
-        if c_layer.next.is_null() {}
+        let c_layer = self.0.as_ref().unwrap();
 
         let width = c_layer.w;
         let height = c_layer.h;
@@ -33,7 +30,7 @@ impl<'renderer> Iterator for Image<'renderer> {
         use crate::ImageKind::*;
         use libass_sys::ass_image__bindgen_ty_1::*;
 
-        Some(Layer {
+        let layer = Some(Layer {
             width,
             height,
             bitmap: {
@@ -53,7 +50,15 @@ impl<'renderer> Iterator for Image<'renderer> {
                 IMAGE_TYPE_OUTLINE => Outline,
                 IMAGE_TYPE_SHADOW => Shadow,
             },
-        })
+        });
+
+        if c_layer.next.is_null() {
+            self.0 = None
+        } else {
+            self.0 = unsafe { Some(&mut *c_layer.next) };
+        }
+
+        layer
     }
 }
 
