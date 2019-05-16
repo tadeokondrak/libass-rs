@@ -1,5 +1,3 @@
-use std::mem;
-
 pub struct Track<'library>(&'library mut libass_sys::ass_track);
 
 impl<'library> Track<'library> {
@@ -16,7 +14,7 @@ impl<'library> Track<'library> {
     }
 
     pub fn step_sub(&self, now: i64, movement: i32) -> i64 {
-        unsafe { libass_sys::ass_step_sub(mem::transmute::<*const _, *mut _>(self.0), now, movement) }
+        unsafe { libass_sys::ass_step_sub(self.0 as *const _ as *mut _, now, movement) }
     }
 }
 

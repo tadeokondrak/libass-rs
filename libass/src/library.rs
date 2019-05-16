@@ -2,7 +2,6 @@ use std::ffi::CString;
 use std::os::raw::c_int;
 use std::ptr;
 use std::slice;
-use std::mem;
 
 use crate::renderer::Renderer;
 use crate::track::Track;
@@ -108,7 +107,7 @@ impl<'a> Library<'a> {
     }
 
     pub fn new_renderer(&self) -> Option<Renderer> {
-        let renderer = unsafe { libass_sys::ass_renderer_init(mem::transmute::<*const _, *mut _>(self.0)) };
+        let renderer = unsafe { libass_sys::ass_renderer_init(self.0 as *const _ as *mut _) };
         if renderer.is_null() {
             return None;
         }
@@ -116,7 +115,7 @@ impl<'a> Library<'a> {
     }
 
     pub fn new_track(&self) -> Option<Track> {
-        let track = unsafe { libass_sys::ass_new_track(mem::transmute::<*const _, *mut _>(self.0)) };
+        let track = unsafe { libass_sys::ass_new_track(self.0 as *const _ as *mut _) };
         if track.is_null() {
             return None;
         }
@@ -129,7 +128,7 @@ impl<'a> Library<'a> {
         let codepage = cstring!(codepage);
         let track = unsafe {
             libass_sys::ass_read_file(
-                mem::transmute::<*const _, *mut _>(self.0),
+                self.0 as *const _ as *mut _,
                 filename.as_ptr() as *mut _,
                 codepage.as_ptr() as *mut _,
             )
@@ -137,7 +136,7 @@ impl<'a> Library<'a> {
         if track.is_null() {
             return None;
         }
-        unsafe { Some(Track::new(&mut *track))}
+        unsafe { Some(Track::new(&mut *track)) }
     }
 
     /// codepage can't have null bytes
@@ -145,7 +144,7 @@ impl<'a> Library<'a> {
         let codepage = cstring!(codepage);
         let track = unsafe {
             libass_sys::ass_read_memory(
-                mem::transmute::<*const _, *mut _>(self.0),
+                self.0 as *const _ as *mut _,
                 data.as_ptr() as *mut _,
                 data.len(),
                 codepage.as_ptr() as *mut _,
