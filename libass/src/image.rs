@@ -18,11 +18,7 @@ impl<'renderer> Image<'renderer> {
 impl<'renderer> Iterator for Image<'renderer> {
     type Item = Layer;
     fn next(&mut self) -> Option<Layer> {
-        if self.0.is_none() {
-            return None
-        }
-
-        let c_layer = self.0.as_ref().unwrap();
+        let c_layer = self.0.as_ref()?;
 
         let width = c_layer.w;
         let height = c_layer.h;
