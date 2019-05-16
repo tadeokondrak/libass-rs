@@ -1,4 +1,4 @@
-use std::ffi::CString;
+use std::ffi::CStr;
 use std::os::raw::c_int;
 use std::ptr;
 use std::slice;
@@ -30,9 +30,7 @@ impl<'a> Library<'a> {
         unsafe { Some(Library(&mut *lib)) }
     }
 
-    /// fonts_dir can't have null bytes
-    pub fn set_fonts_dir(&mut self, fonts_dir: &str) {
-        let fonts_dir = cstring!(fonts_dir);
+    pub fn set_fonts_dir(&mut self, fonts_dir: &CStr) {
         unsafe { libass_sys::ass_set_fonts_dir(self.0, fonts_dir.as_ptr()) }
     }
 
@@ -40,17 +38,11 @@ impl<'a> Library<'a> {
         unsafe { libass_sys::ass_set_extract_fonts(self.0, extract as c_int) }
     }
 
-    /// list can't have null bytes
-    pub fn set_style_overrides(&mut self, list: &[&str]) {
-        let mut c_list: Vec<CString> = Vec::with_capacity(list.len());
-        for item in list {
-            c_list.push(cstring!(*item))
-        }
+    pub fn set_style_overrides(&mut self, list: &[&CStr]) {
         unsafe {
             libass_sys::ass_set_style_overrides(
                 self.0,
-                c_list
-                    .iter()
+                list.iter()
                     .map(|x| x.as_ptr())
                     .collect::<Vec<_>>()
                     .as_slice()
@@ -59,9 +51,7 @@ impl<'a> Library<'a> {
         };
     }
 
-    /// name can't have null bytes
-    pub fn add_font(&mut self, name: &str, data: &[u8]) {
-        let name = cstring!(name);
+    pub fn add_font(&mut self, name: &CStr, data: &[u8]) {
         unsafe {
             libass_sys::ass_add_font(
                 self.0,
@@ -122,10 +112,7 @@ impl<'a> Library<'a> {
         unsafe { Some(Track::new(&mut *track)) }
     }
 
-    /// filename and codepage can't have null bytes
-    pub fn new_track_from_file(&self, filename: &str, codepage: &str) -> Option<Track> {
-        let filename = cstring!(filename);
-        let codepage = cstring!(codepage);
+    pub fn new_track_from_file(&self, filename: &CStr, codepage: &CStr) -> Option<Track> {
         let track = unsafe {
             libass_sys::ass_read_file(
                 self.0 as *const _ as *mut _,
@@ -139,9 +126,7 @@ impl<'a> Library<'a> {
         unsafe { Some(Track::new(&mut *track)) }
     }
 
-    /// codepage can't have null bytes
-    pub fn new_track_from_memory(&self, data: &[u8], codepage: &str) -> Option<Track> {
-        let codepage = cstring!(codepage);
+    pub fn new_track_from_memory(&self, data: &[u8], codepage: &CStr) -> Option<Track> {
         let track = unsafe {
             libass_sys::ass_read_memory(
                 self.0 as *const _ as *mut _,

@@ -1,12 +1,3 @@
-#[macro_use]
-mod macros {
-    macro_rules! cstring {
-        ($i:expr) => {
-            CString::new($i).expect("no null characters are allowed")
-        };
-    }
-}
-
 mod library;
 pub use crate::library::*;
 

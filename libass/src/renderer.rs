@@ -1,6 +1,5 @@
-use std::ffi::CString;
+use std::ffi::CStr;
 use std::os::raw::c_int;
-use std::ptr;
 
 use crate::image::Image;
 use crate::library::DefaultFontProvider;
@@ -29,7 +28,7 @@ pub enum Change {
 
 pub struct Renderer<'library>(&'library mut libass_sys::ass_renderer);
 
-impl<'library> Renderer<'library>{
+impl<'library> Renderer<'library> {
     pub(crate) fn new(renderer: &'library mut libass_sys::ass_renderer) -> Self {
         Renderer(renderer)
     }
@@ -56,31 +55,22 @@ impl<'library> Renderer<'library>{
         unsafe { (Some(Image::new(&mut *image)), change) }
     }
 
-    /// default_font, default_family, and fontconfig_config_path can't have null characters
     pub fn set_fonts(
         &mut self,
-        default_font: Option<&str>,
-        default_family: Option<&str>,
+        default_font: Option<&CStr>,
+        default_family: Option<&CStr>,
         default_font_provider: DefaultFontProvider,
-        fontconfig_config_path: Option<&str>,
+        fontconfig_config_path: Option<&CStr>,
         update_fontconfig_cache: bool,
     ) {
-        macro_rules! optional_cstring {
-            ($i:ident, $p:ident) => {
-                let $i: Option<CString> = match $i {
-                    Some(name) => Some(cstring!(name)),
-                    None => None,
-                };
-                let $p = match $i {
-                    Some(name) => name.as_ptr(),
-                    None => ptr::null(),
-                };
+        macro_rules! unwrap_or_null {
+            ($x:expr) => {
+                match $x {
+                    Some(s) => s.as_ptr(),
+                    None => ::std::ptr::null(),
+                }
             };
         }
-
-        optional_cstring!(default_font, default_font_ptr);
-        optional_cstring!(default_family, default_family_ptr);
-        optional_cstring!(fontconfig_config_path, fontconfig_config_path_ptr);
 
         use libass_sys::ASS_DefaultFontProvider::*;
         let default_font_provider = match default_font_provider {
@@ -94,10 +84,10 @@ impl<'library> Renderer<'library>{
         unsafe {
             libass_sys::ass_set_fonts(
                 self.0,
-                default_font_ptr,
-                default_family_ptr,
+                unwrap_or_null!(default_font),
+                unwrap_or_null!(default_family),
                 default_font_provider as c_int,
-                fontconfig_config_path_ptr,
+                unwrap_or_null!(fontconfig_config_path),
                 update_fontconfig_cache as c_int,
             )
         };
