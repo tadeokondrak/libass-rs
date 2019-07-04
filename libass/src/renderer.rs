@@ -171,6 +171,16 @@ impl<'library> Renderer<'library> {
     pub fn set_line_position(&mut self, line_position: f64) {
         unsafe { ffi::ass_set_line_position(self.handle.as_ptr(), line_position) }
     }
+
+    #[doc(hidden)]
+    pub fn update_fonts(&mut self) -> Result<(), i32> {
+        let ret = unsafe { ffi::ass_fonts_update(self.handle.as_ptr()) };
+        if ret == 0 {
+            Ok(())
+        } else {
+            Err(ret)
+        }
+    }
 }
 
 impl<'library> Drop for Renderer<'library> {
