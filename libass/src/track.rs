@@ -47,6 +47,38 @@ impl<'library> Track<'library> {
     pub fn flush_events(&mut self) {
         unsafe { ffi::ass_flush_events(self.handle.as_ptr()) }
     }
+
+    pub fn process_data(&mut self, data: &mut [u8]) {
+        unsafe {
+            ffi::ass_process_data(
+                self.handle.as_ptr(),
+                data.as_ptr() as *mut _,
+                data.len() as c_int,
+            )
+        }
+    }
+
+    pub fn process_codec_private(&mut self, data: &mut [u8]) {
+        unsafe {
+            ffi::ass_process_codec_private(
+                self.handle.as_ptr(),
+                data.as_ptr() as *mut _,
+                data.len() as c_int,
+            )
+        }
+    }
+
+    pub fn process_chunk(&mut self, data: &mut [u8], timecode: i64, duration: i64) {
+        unsafe {
+            ffi::ass_process_chunk(
+                self.handle.as_ptr(),
+                data.as_ptr() as *mut _,
+                data.len() as c_int,
+                timecode,
+                duration,
+            )
+        }
+    }
 }
 
 impl<'library> Drop for Track<'library> {
