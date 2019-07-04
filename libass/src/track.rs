@@ -1,5 +1,6 @@
 use std::ffi::CStr;
 use std::marker::PhantomData;
+use std::os::raw::c_int;
 use std::ptr::NonNull;
 
 use libass_sys as ffi;
@@ -37,6 +38,14 @@ impl<'library> Track<'library> {
                 codepage.as_ptr() as *mut _,
             );
         }
+    }
+
+    pub fn set_check_readorder(&mut self, check_readorder: bool) {
+        unsafe { ffi::ass_set_check_readorder(self.handle.as_ptr(), check_readorder as c_int) }
+    }
+
+    pub fn flush_events(&mut self) {
+        unsafe { ffi::ass_flush_events(self.handle.as_ptr()) }
     }
 }
 
