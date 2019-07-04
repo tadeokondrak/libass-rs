@@ -9,3 +9,6 @@ pub use crate::renderer::*;
 
 mod image;
 pub use crate::image::*;
+
+mod style;
+pub use crate::style::*;

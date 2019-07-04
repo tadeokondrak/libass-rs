@@ -5,6 +5,7 @@ use std::ptr::NonNull;
 
 use crate::image::Image;
 use crate::library::DefaultFontProvider;
+use crate::style::{OverrideBits, Style};
 use crate::track::Track;
 
 use libass_sys as ffi;
@@ -174,6 +175,21 @@ impl<'library> Renderer<'library> {
 
     pub fn set_cache_limits(&mut self, glyph_max: i32, bitmap_max_size: i32) {
         unsafe { ffi::ass_set_cache_limits(self.handle.as_ptr(), glyph_max, bitmap_max_size) }
+    }
+
+    pub fn set_selective_style_override(&mut self, style: &Style) {
+        unsafe {
+            ffi::ass_set_selective_style_override(
+                self.handle.as_ptr(),
+                &style.as_ass_style() as *const _ as *mut _,
+            )
+        }
+    }
+
+    pub fn set_selective_style_override_enabled(&mut self, bits: OverrideBits) {
+        unsafe {
+            ffi::ass_set_selective_style_override_enabled(self.handle.as_ptr(), bits.bits() as i32)
+        }
     }
 
     #[doc(hidden)]
