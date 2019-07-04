@@ -22,6 +22,20 @@ impl<'library> Track<'library> {
         self.handle.as_ptr()
     }
 
+    pub fn new_style<'track>(&'track self) -> Style<'track> {
+        Style {
+            id: unsafe { ffi::ass_alloc_style(self.handle.as_ptr()) },
+            parent: &self,
+        }
+    }
+
+    pub fn new_event<'track>(&'track self) -> Event<'track> {
+        Event {
+            id: unsafe { ffi::ass_alloc_event(self.handle.as_ptr()) },
+            parent: &self,
+        }
+    }
+
     pub fn step_sub(&self, now: i64, movement: i32) -> i64 {
         unsafe { ffi::ass_step_sub(self.handle.as_ptr() as *mut _, now, movement) }
     }
@@ -84,5 +98,27 @@ impl<'library> Track<'library> {
 impl<'library> Drop for Track<'library> {
     fn drop(&mut self) {
         unsafe { ffi::ass_free_track(self.handle.as_ptr()) }
+    }
+}
+
+pub struct Style<'track> {
+    pub id: i32,
+    parent: &'track Track<'track>,
+}
+
+impl<'track> Drop for Style<'track> {
+    fn drop(&mut self) {
+        unsafe { ffi::ass_free_style(self.parent.handle.as_ptr(), self.id) }
+    }
+}
+
+pub struct Event<'track> {
+    pub id: i32,
+    parent: &'track Track<'track>,
+}
+
+impl<'track> Drop for Event<'track> {
+    fn drop(&mut self) {
+        unsafe { ffi::ass_free_event(self.parent.handle.as_ptr(), self.id) }
     }
 }
