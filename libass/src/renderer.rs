@@ -1,9 +1,13 @@
 use std::ffi::CStr;
+use std::marker::PhantomData;
 use std::os::raw::c_int;
+use std::ptr::NonNull;
 
 use crate::image::Image;
 use crate::library::DefaultFontProvider;
 use crate::track::Track;
+
+use libass_sys as ffi;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ShapingLevel {
@@ -26,11 +30,17 @@ pub enum Change {
     Content,
 }
 
-pub struct Renderer<'library>(&'library mut libass_sys::ass_renderer);
+pub struct Renderer<'library> {
+    handle: NonNull<ffi::ass_renderer>,
+    phantom: PhantomData<&'library mut ffi::ass_renderer>,
+}
 
 impl<'library> Renderer<'library> {
-    pub(crate) fn new(renderer: &'library mut libass_sys::ass_renderer) -> Self {
-        Renderer(renderer)
+    pub(crate) unsafe fn new_unchecked(renderer: *mut ffi::ass_renderer) -> Self {
+        Renderer {
+            handle: NonNull::new_unchecked(renderer),
+            phantom: PhantomData,
+        }
     }
 
     pub fn render_frame(&mut self, track: Track, now: i64) -> (Option<Image>, Change) {
@@ -38,7 +48,12 @@ impl<'library> Renderer<'library> {
         let change_ptr: *mut _ = &mut change;
 
         let image = unsafe {
-            libass_sys::ass_render_frame(self.0, track.as_ptr() as *mut _, now, change_ptr)
+            ffi::ass_render_frame(
+                self.handle.as_ptr(),
+                track.as_ptr() as *mut _,
+                now,
+                change_ptr,
+            )
         };
 
         let change = match change {
@@ -49,10 +64,10 @@ impl<'library> Renderer<'library> {
         };
 
         if image.is_null() {
-            return (None, change);
+            (None, change)
+        } else {
+            unsafe { (Some(Image::new_unchecked(image)), change) }
         }
-
-        unsafe { (Some(Image::new(&mut *image)), change) }
     }
 
     pub fn set_fonts(
@@ -72,7 +87,7 @@ impl<'library> Renderer<'library> {
             };
         }
 
-        use libass_sys::ASS_DefaultFontProvider::*;
+        use ffi::ASS_DefaultFontProvider::*;
         let default_font_provider = match default_font_provider {
             DefaultFontProvider::None => ASS_FONTPROVIDER_NONE,
             DefaultFontProvider::Autodetect => ASS_FONTPROVIDER_AUTODETECT,
@@ -82,8 +97,8 @@ impl<'library> Renderer<'library> {
         };
 
         unsafe {
-            libass_sys::ass_set_fonts(
-                self.0,
+            ffi::ass_set_fonts(
+                self.handle.as_ptr(),
                 unwrap_or_null!(default_font),
                 unwrap_or_null!(default_family),
                 default_font_provider as c_int,
@@ -94,18 +109,18 @@ impl<'library> Renderer<'library> {
     }
 
     pub fn set_frame_size(&mut self, width: i32, height: i32) {
-        unsafe { libass_sys::ass_set_frame_size(self.0, width, height) }
+        unsafe { ffi::ass_set_frame_size(self.handle.as_ptr(), width, height) }
     }
 
     pub fn set_storage_size(&mut self, width: i32, height: i32) {
-        unsafe { libass_sys::ass_set_storage_size(self.0, width, height) }
+        unsafe { ffi::ass_set_storage_size(self.handle.as_ptr(), width, height) }
     }
 
     pub fn set_shaper(&mut self, level: ShapingLevel) {
         unsafe {
             use crate::renderer::ShapingLevel::*;
-            use libass_sys::ASS_ShapingLevel::*;
-            libass_sys::ass_set_shaper(self.0, {
+            use ffi::ASS_ShapingLevel::*;
+            ffi::ass_set_shaper(self.handle.as_ptr(), {
                 match level {
                     Simple => ASS_SHAPING_SIMPLE,
                     Complex => ASS_SHAPING_COMPLEX,
@@ -115,30 +130,30 @@ impl<'library> Renderer<'library> {
     }
 
     pub fn set_margins(&mut self, top: i32, bottom: i32, left: i32, right: i32) {
-        unsafe { libass_sys::ass_set_margins(self.0, top, bottom, left, right) }
+        unsafe { ffi::ass_set_margins(self.handle.as_ptr(), top, bottom, left, right) }
     }
 
     pub fn use_margins(&mut self, use_: bool) {
-        unsafe { libass_sys::ass_set_use_margins(self.0, use_ as c_int) }
+        unsafe { ffi::ass_set_use_margins(self.handle.as_ptr(), use_ as c_int) }
     }
 
     pub fn set_pixel_aspect_ratio(&mut self, par: f64) {
-        unsafe { libass_sys::ass_set_pixel_aspect(self.0, par) }
+        unsafe { ffi::ass_set_pixel_aspect(self.handle.as_ptr(), par) }
     }
 
     pub fn set_aspect_ratio(&mut self, dar: f64, sar: f64) {
-        unsafe { libass_sys::ass_set_aspect_ratio(self.0, dar, sar) }
+        unsafe { ffi::ass_set_aspect_ratio(self.handle.as_ptr(), dar, sar) }
     }
 
     pub fn set_font_scale(&mut self, font_scale: f64) {
-        unsafe { libass_sys::ass_set_font_scale(self.0, font_scale) }
+        unsafe { ffi::ass_set_font_scale(self.handle.as_ptr(), font_scale) }
     }
 
     pub fn set_hinting(&mut self, font_hinting: Hinting) {
         unsafe {
             use crate::Hinting::*;
-            use libass_sys::ASS_Hinting::*;
-            libass_sys::ass_set_hinting(self.0, {
+            use ffi::ASS_Hinting::*;
+            ffi::ass_set_hinting(self.handle.as_ptr(), {
                 match font_hinting {
                     None => ASS_HINTING_NONE,
                     Light => ASS_HINTING_LIGHT,
@@ -150,16 +165,16 @@ impl<'library> Renderer<'library> {
     }
 
     pub fn set_line_spacing(&mut self, line_spacing: f64) {
-        unsafe { libass_sys::ass_set_line_spacing(self.0, line_spacing) }
+        unsafe { ffi::ass_set_line_spacing(self.handle.as_ptr(), line_spacing) }
     }
 
     pub fn set_line_position(&mut self, line_position: f64) {
-        unsafe { libass_sys::ass_set_line_position(self.0, line_position) }
+        unsafe { ffi::ass_set_line_position(self.handle.as_ptr(), line_position) }
     }
 }
 
 impl<'library> Drop for Renderer<'library> {
     fn drop(&mut self) {
-        unsafe { libass_sys::ass_renderer_done(self.0) }
+        unsafe { ffi::ass_renderer_done(self.handle.as_ptr()) }
     }
 }

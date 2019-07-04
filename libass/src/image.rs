@@ -1,4 +1,8 @@
+use std::marker::PhantomData;
+use std::ptr::NonNull;
 use std::slice;
+
+use libass_sys as ffi;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ImageKind {
@@ -7,33 +11,39 @@ pub enum ImageKind {
     Shadow,
 }
 
-pub struct Image<'renderer>(Option<&'renderer mut libass_sys::ass_image>);
+pub struct Image<'renderer> {
+    handle: Option<NonNull<ffi::ass_image>>,
+    phantom: PhantomData<&'renderer mut ffi::ass_image>,
+}
 
 impl<'renderer> Image<'renderer> {
-    pub(crate) fn new(image: &'renderer mut libass_sys::ass_image) -> Self {
-        Image(Some(image))
+    pub(crate) unsafe fn new_unchecked(image: *mut ffi::ass_image) -> Self {
+        Image {
+            handle: Some(NonNull::new_unchecked(image)),
+            phantom: PhantomData,
+        }
     }
 }
 
 impl<'renderer> Iterator for Image<'renderer> {
     type Item = Layer;
     fn next(&mut self) -> Option<Layer> {
-        let c_layer = self.0.as_ref()?;
-
-        let width = c_layer.w;
-        let height = c_layer.h;
+        let handle = self.handle?;
+        let c_layer = unsafe { handle.as_ref() };
 
         use crate::ImageKind::*;
-        use libass_sys::ass_image__bindgen_ty_1::*;
+        use ffi::ass_image__bindgen_ty_1::*;
 
         let layer = Some(Layer {
-            width,
-            height,
+            width: c_layer.w,
+            height: c_layer.h,
             bitmap: {
-                let mut vec = Vec::with_capacity((width * height) as usize);
+                let mut vec = Vec::with_capacity((c_layer.w * c_layer.h) as usize);
                 let mut ptr = c_layer.bitmap;
-                for _ in 0..height {
-                    unsafe { vec.extend_from_slice(slice::from_raw_parts(ptr, width as usize)) };
+                for _ in 0..c_layer.h {
+                    unsafe {
+                        vec.extend_from_slice(slice::from_raw_parts(ptr, c_layer.w as usize))
+                    };
                     ptr = unsafe { ptr.offset(c_layer.stride as isize) };
                 }
                 vec
@@ -48,11 +58,11 @@ impl<'renderer> Iterator for Image<'renderer> {
             },
         });
 
-        if c_layer.next.is_null() {
-            self.0 = None
+        self.handle = if c_layer.next.is_null() {
+            None
         } else {
-            self.0 = unsafe { Some(&mut *c_layer.next) };
-        }
+            unsafe { Some(NonNull::new_unchecked(c_layer.next)) }
+        };
 
         layer
     }

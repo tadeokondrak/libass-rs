@@ -1,28 +1,38 @@
 use std::ffi::CStr;
+use std::marker::PhantomData;
+use std::ptr::NonNull;
 
-pub struct Track<'library>(&'library mut libass_sys::ass_track);
+use libass_sys as ffi;
+
+pub struct Track<'library> {
+    handle: NonNull<ffi::ass_track>,
+    phantom: PhantomData<&'library mut ffi::ass_track>,
+}
 
 impl<'library> Track<'library> {
-    pub(crate) fn new(track: &'library mut libass_sys::ass_track) -> Self {
-        Track(track)
+    pub(crate) unsafe fn new_unchecked(track: *mut ffi::ass_track) -> Self {
+        Track {
+            handle: NonNull::new_unchecked(track),
+            phantom: PhantomData,
+        }
     }
 
-    pub(crate) fn as_ptr(&self) -> *const libass_sys::ass_track {
-        self.0
+    pub(crate) fn as_ptr(&self) -> *const ffi::ass_track {
+        self.handle.as_ptr()
     }
 
     pub fn step_sub(&self, now: i64, movement: i32) -> i64 {
-        unsafe { libass_sys::ass_step_sub(self.0 as *const _ as *mut _, now, movement) }
+        unsafe { ffi::ass_step_sub(self.handle.as_ptr() as *mut _, now, movement) }
     }
 
     pub fn process_force_style(&mut self) {
-        unsafe { libass_sys::ass_process_force_style(self.0) }
+        unsafe { ffi::ass_process_force_style(self.handle.as_ptr()) }
     }
 
     pub fn read_styles(&mut self, filename: &CStr, codepage: &CStr) {
         unsafe {
-            libass_sys::ass_read_styles(
-                self.0,
+            ffi::ass_read_styles(
+                self.handle.as_ptr(),
                 filename.as_ptr() as *mut _,
                 codepage.as_ptr() as *mut _,
             );
@@ -32,6 +42,6 @@ impl<'library> Track<'library> {
 
 impl<'library> Drop for Track<'library> {
     fn drop(&mut self) {
-        unsafe { libass_sys::ass_free_track(self.0) }
+        unsafe { ffi::ass_free_track(self.handle.as_ptr()) }
     }
 }

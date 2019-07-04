@@ -1,7 +1,11 @@
 use std::ffi::CStr;
+use std::marker::PhantomData;
 use std::os::raw::c_int;
 use std::ptr;
+use std::ptr::NonNull;
 use std::slice;
+
+use libass_sys as ffi;
 
 use crate::renderer::Renderer;
 use crate::track::Track;
@@ -15,33 +19,40 @@ pub enum DefaultFontProvider {
     DirectWrite,
 }
 
-pub struct Library<'a>(&'a mut libass_sys::ass_library);
+pub fn version() -> i32 {
+    unsafe { ffi::ass_library_version() }
+}
+
+pub struct Library<'a> {
+    handle: NonNull<ffi::ass_library>,
+    phantom: PhantomData<&'a mut ffi::ass_library>,
+}
 
 impl<'a> Library<'a> {
-    pub fn version() -> i32 {
-        unsafe { libass_sys::ass_library_version() }
-    }
-
     pub fn new() -> Option<Self> {
-        let lib = unsafe { libass_sys::ass_library_init() };
+        let lib = unsafe { ffi::ass_library_init() };
         if lib.is_null() {
-            return None;
+            None
+        } else {
+            Some(Library {
+                handle: unsafe { NonNull::new_unchecked(lib) },
+                phantom: PhantomData,
+            })
         }
-        unsafe { Some(Library(&mut *lib)) }
     }
 
     pub fn set_fonts_dir(&mut self, fonts_dir: &CStr) {
-        unsafe { libass_sys::ass_set_fonts_dir(self.0, fonts_dir.as_ptr()) }
+        unsafe { ffi::ass_set_fonts_dir(self.handle.as_ptr(), fonts_dir.as_ptr()) }
     }
 
     pub fn set_extract_fonts(&mut self, extract: bool) {
-        unsafe { libass_sys::ass_set_extract_fonts(self.0, extract as c_int) }
+        unsafe { ffi::ass_set_extract_fonts(self.handle.as_ptr(), extract as c_int) }
     }
 
     pub fn set_style_overrides(&mut self, list: &[&CStr]) {
         unsafe {
-            libass_sys::ass_set_style_overrides(
-                self.0,
+            ffi::ass_set_style_overrides(
+                self.handle.as_ptr(),
                 list.iter()
                     .map(|x| x.as_ptr())
                     .collect::<Vec<_>>()
@@ -53,8 +64,8 @@ impl<'a> Library<'a> {
 
     pub fn add_font(&mut self, name: &CStr, data: &[u8]) {
         unsafe {
-            libass_sys::ass_add_font(
-                self.0,
+            ffi::ass_add_font(
+                self.handle.as_ptr(),
                 name.as_ptr() as *mut _,
                 data.as_ptr() as *mut _,
                 data.len() as c_int,
@@ -63,17 +74,19 @@ impl<'a> Library<'a> {
     }
 
     pub fn clear_fonts(&mut self) {
-        unsafe { libass_sys::ass_clear_fonts(self.0) }
+        unsafe { ffi::ass_clear_fonts(self.handle.as_ptr()) }
     }
 
     pub fn get_available_font_providers(&mut self) -> Vec<DefaultFontProvider> {
-        let mut providers: *mut libass_sys::ASS_DefaultFontProvider = ptr::null_mut();
-        let providers_ptr = &mut providers as *mut *mut libass_sys::ASS_DefaultFontProvider;
+        let mut providers: *mut ffi::ASS_DefaultFontProvider = ptr::null_mut();
+        let providers_ptr = &mut providers as *mut *mut ffi::ASS_DefaultFontProvider;
 
         let mut size: usize = 0;
         let size_ptr = &mut size as *mut usize;
 
-        unsafe { libass_sys::ass_get_available_font_providers(self.0, providers_ptr, size_ptr) };
+        unsafe {
+            ffi::ass_get_available_font_providers(self.handle.as_ptr(), providers_ptr, size_ptr)
+        };
 
         let providers_slice = unsafe { slice::from_raw_parts(providers, size) };
 
@@ -81,7 +94,7 @@ impl<'a> Library<'a> {
 
         for provider in providers_slice {
             use crate::library::DefaultFontProvider::*;
-            use libass_sys::ASS_DefaultFontProvider::*;
+            use ffi::ASS_DefaultFontProvider::*;
             vec.push(match provider {
                 ASS_FONTPROVIDER_NONE => None,
                 ASS_FONTPROVIDER_AUTODETECT => Autodetect,
@@ -97,53 +110,60 @@ impl<'a> Library<'a> {
     }
 
     pub fn new_renderer(&self) -> Option<Renderer> {
-        let renderer = unsafe { libass_sys::ass_renderer_init(self.0 as *const _ as *mut _) };
+        let renderer = unsafe { ffi::ass_renderer_init(self.handle.as_ptr() as *mut _) };
+
         if renderer.is_null() {
-            return None;
+            None
+        } else {
+            unsafe { Some(Renderer::new_unchecked(renderer)) }
         }
-        unsafe { Some(Renderer::new(&mut *renderer)) }
     }
 
     pub fn new_track(&self) -> Option<Track> {
-        let track = unsafe { libass_sys::ass_new_track(self.0 as *const _ as *mut _) };
+        let track = unsafe { ffi::ass_new_track(self.handle.as_ptr() as *mut _) };
         if track.is_null() {
-            return None;
+            None
+        } else {
+            unsafe { Some(Track::new_unchecked(track)) }
         }
-        unsafe { Some(Track::new(&mut *track)) }
     }
 
     pub fn new_track_from_file(&self, filename: &CStr, codepage: &CStr) -> Option<Track> {
         let track = unsafe {
-            libass_sys::ass_read_file(
-                self.0 as *const _ as *mut _,
+            ffi::ass_read_file(
+                self.handle.as_ptr() as *mut _,
                 filename.as_ptr() as *mut _,
                 codepage.as_ptr() as *mut _,
             )
         };
+
         if track.is_null() {
-            return None;
+            None
+        } else {
+            unsafe { Some(Track::new_unchecked(track)) }
         }
-        unsafe { Some(Track::new(&mut *track)) }
     }
 
     pub fn new_track_from_memory(&self, data: &[u8], codepage: &CStr) -> Option<Track> {
         let track = unsafe {
-            libass_sys::ass_read_memory(
-                self.0 as *const _ as *mut _,
+            ffi::ass_read_memory(
+                self.handle.as_ptr() as *mut _,
                 data.as_ptr() as *mut _,
                 data.len(),
                 codepage.as_ptr() as *mut _,
             )
         };
+
         if track.is_null() {
-            return None;
+            None
+        } else {
+            unsafe { Some(Track::new_unchecked(track)) }
         }
-        unsafe { Some(Track::new(&mut *track)) }
     }
 }
 
 impl<'a> Drop for Library<'a> {
     fn drop(&mut self) {
-        unsafe { libass_sys::ass_library_done(self.0) }
+        unsafe { ffi::ass_library_done(self.handle.as_ptr()) }
     }
 }
