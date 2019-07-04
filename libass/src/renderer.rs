@@ -172,6 +172,10 @@ impl<'library> Renderer<'library> {
         unsafe { ffi::ass_set_line_position(self.handle.as_ptr(), line_position) }
     }
 
+    pub fn set_cache_limits(&mut self, glyph_max: i32, bitmap_max_size: i32) {
+        unsafe { ffi::ass_set_cache_limits(self.handle.as_ptr(), glyph_max, bitmap_max_size) }
+    }
+
     #[doc(hidden)]
     pub fn update_fonts(&mut self) -> Result<(), i32> {
         let ret = unsafe { ffi::ass_fonts_update(self.handle.as_ptr()) };
