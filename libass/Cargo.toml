@@ -1,6 +1,6 @@
 [package]
 name = "libass"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Tadeo Kondrak <me@tadeo.ca>"]
 edition = "2018"
 description = "Safe bindings for libass"
@@ -9,8 +9,7 @@ repository = "https://github.com/tadeokondrak/libass-rs"
 keywords = [ "libass" ]
 categories =  ["api-bindings", "multimedia", "multimedia::video", "graphics"]
 
-
-
 [dependencies]
 libc = "0.2.54"
-libass-sys = { version = "0.1.0", path = '../libass-sys' }
+libass-sys = { version = "0.1.1", path = '../libass-sys' }
+bitflags = "1.1.0"
