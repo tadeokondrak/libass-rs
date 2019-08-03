@@ -22,14 +22,14 @@ impl<'library> Track<'library> {
         self.handle.as_ptr()
     }
 
-    pub fn new_style<'track>(&'track self) -> Style<'track> {
+    pub fn new_style(&self) -> Style {
         Style {
             id: unsafe { ffi::ass_alloc_style(self.handle.as_ptr()) },
             parent: &self,
         }
     }
 
-    pub fn new_event<'track>(&'track self) -> Event<'track> {
+    pub fn new_event(&self) -> Event {
         Event {
             id: unsafe { ffi::ass_alloc_event(self.handle.as_ptr()) },
             parent: &self,

@@ -36,7 +36,7 @@ pub struct Style {
 bitflags! {
     pub struct OverrideBits: u32 {
         const DEFAULT = 0;
-        const BIT_STYLE = 1 << 0;
+        const BIT_STYLE = 1;
         const BIT_SELECTIVE_FONT_SCALE = 1 << 1;
         const BIT_FONT_SIZE = 1 << 1;
         const BIT_FONT_SIZE_FIELDS = 1 << 2;
