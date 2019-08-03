@@ -1,5 +1,3 @@
-#![feature(uniform_paths)]
-
 mod library;
 pub use crate::library::*;
 
