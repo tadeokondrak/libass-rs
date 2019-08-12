@@ -1,3 +1,0 @@
-[submodule "libass-sys/libass"]
-	path = libass-sys/libass
-	url = https://github.com/libass/libass
