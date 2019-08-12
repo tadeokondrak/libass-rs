@@ -9,7 +9,9 @@ license = "ISC"
 repository = "https://github.com/tadeokondrak/libass-rs"
 categories = [ "external-ffi-bindings" ]
 
-[dependencies]
-
 [build-dependencies]
-bindgen = "0.49.0"
+bindgen = "0.50"
+metadeps = "1.1"
+
+[package.metadata.pkg-config]
+libass = "0.14"

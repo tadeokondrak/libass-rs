@@ -1,13 +1,17 @@
 extern crate bindgen;
+extern crate metadeps;
 
 use std::env;
+use std::fs::File;
+use std::io::Write;
 use std::path::PathBuf;
 
 fn main() {
-    println!("cargo:rustc-link-lib=ass");
+    let libs = metadeps::probe().unwrap();
+    let headers = libs.get("libass").unwrap().include_paths.clone();
 
-    let bindings = bindgen::Builder::default()
-        .header("wrapper.h")
+    let mut builder = bindgen::builder()
+        .header("data/libass.h")
         .whitelist_function("^ass_.*")
         .blacklist_function("ass_set_message_cb")
         .whitelist_type("^(ASS|ass).*")
@@ -19,12 +23,23 @@ fn main() {
         .rustified_enum("ASS_YCbCrMatrix")
         .rustified_enum("ASS_ShapingLevel")
         .rustified_enum("IMAGE_TYPE.*")
-        .rustified_enum("TRACK_TYPE.*")
+        .rustified_enum("TRACK_TYPE.*");
+
+    for header in headers {
+        builder = builder.clang_arg("-I").clang_arg(header.to_str().unwrap());
+    }
+
+    // Manually fix the comment so rustdoc won't try to pick them
+    let s = builder
         .generate()
-        .expect("Unable to generate bindings");
+        .unwrap()
+        .to_string()
+        .replace("/**", "/*")
+        .replace("/*!", "/*");
 
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-    bindings
-        .write_to_file(out_path.join("bindings.rs"))
-        .expect("Couldn't write bindings!");
+
+    let mut file = File::create(out_path.join("libass.rs")).unwrap();
+
+    let _ = file.write(s.as_bytes());
 }
