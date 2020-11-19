@@ -1,9 +1,8 @@
-use std::marker::PhantomData;
-use std::os::raw::c_int;
+use std::{ffi::CStr, os::raw::c_int};
 use std::ptr;
-use std::ptr::null_mut;
 use std::ptr::NonNull;
 use std::slice;
+use std::{ffi::CString, marker::PhantomData};
 
 use libass_sys as ffi;
 
@@ -40,6 +39,7 @@ impl<'a> Library<'a> {
     }
 
     pub fn set_fonts_dir(&mut self, fonts_dir: &str) {
+        let fonts_dir = CString::new(fonts_dir).unwrap();
         unsafe { ffi::ass_set_fonts_dir(self.handle.as_ptr(), fonts_dir.as_ptr() as *const i8) }
     }
 
@@ -47,7 +47,7 @@ impl<'a> Library<'a> {
         unsafe { ffi::ass_set_extract_fonts(self.handle.as_ptr(), extract as c_int) }
     }
 
-    pub fn set_style_overrides(&mut self, list: &[&str]) {
+    pub fn set_style_overrides(&mut self, list: &[&CStr]) {
         unsafe {
             ffi::ass_set_style_overrides(
                 self.handle.as_ptr(),
@@ -61,6 +61,7 @@ impl<'a> Library<'a> {
     }
 
     pub fn add_font(&mut self, name: &str, data: &[u8]) {
+        let name = CString::new(name).unwrap();
         unsafe {
             ffi::ass_add_font(
                 self.handle.as_ptr(),
@@ -119,12 +120,14 @@ impl<'a> Library<'a> {
         unsafe { Ok(Track::new_unchecked(track)) }
     }
 
-    pub fn new_track_from_file(&self, filename: &str) -> Result<Track> {
+    pub fn new_track_from_file(&self, filename: &str, codepage: &str) -> Result<Track> {
+        let filename = CString::new(filename).unwrap();
+        let cp = CString::new(codepage).unwrap();
         let track = unsafe {
             ffi::ass_read_file(
                 self.handle.as_ptr() as *mut _,
                 filename.as_ptr() as *mut _,
-                null_mut(),
+                cp.as_ptr() as *mut _,
             )
         };
 
@@ -133,12 +136,13 @@ impl<'a> Library<'a> {
     }
 
     pub fn new_track_from_memory(&self, data: &[u8], codepage: &str) -> Result<Track> {
+        let cp = CString::new(codepage).unwrap();
         let track = unsafe {
             ffi::ass_read_memory(
                 self.handle.as_ptr() as *mut _,
                 data.as_ptr() as *mut _,
                 data.len(),
-                codepage.as_ptr() as *mut _,
+                cp.as_ptr() as *mut _,
             )
         };
 

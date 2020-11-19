@@ -53,7 +53,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         false,
     );
     
-    let track = lib.new_track_from_file(sub_file)?;
+    let track = lib.new_track_from_file(sub_file, "UTF-8")?;
     let frame = renderer.render_frame(track, timestamp);
     let image = frame.0.unwrap();
 

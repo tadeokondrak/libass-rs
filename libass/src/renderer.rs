@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 use std::os::raw::c_int;
 use std::ptr::NonNull;
+use std::ffi::CString;
 
 use crate::image::Image;
 use crate::library::DefaultFontProvider;
@@ -81,7 +82,7 @@ impl<'library> Renderer<'library> {
         macro_rules! unwrap_or_null {
             ($x:expr) => {
                 match $x {
-                    Some(s) => s.as_ptr() as *const i8,
+                    Some(s) => CString::new(s).unwrap().as_ptr(),
                     None => ::std::ptr::null(),
                 }
             };
