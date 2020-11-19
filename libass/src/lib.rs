@@ -1,5 +1,3 @@
-use std::error::Error;
-
 mod library;
 pub use crate::library::*;
 
@@ -16,21 +14,21 @@ mod style;
 pub use crate::style::*;
 
 #[derive(Debug)]
-pub struct AssError;
-impl std::fmt::Display for AssError {
+pub struct Error;
+impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Libass Error")
     }
 }
-impl Error for AssError {}
+impl std::error::Error for Error {}
 
-pub type AssResult<T> = Result<T, AssError>;
+pub type Result<T> = std::result::Result<T, Error>;
 
 #[macro_export]
 macro_rules! err_if_null {
     ($e:expr) => {
         if $e.is_null() {
-            return Err(crate::AssError);
+            return Err(crate::Error);
         }
     };
 }

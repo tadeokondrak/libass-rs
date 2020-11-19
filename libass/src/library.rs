@@ -9,7 +9,7 @@ use libass_sys as ffi;
 
 use crate::renderer::Renderer;
 use crate::track::Track;
-use crate::{err_if_null, AssResult};
+use crate::{err_if_null, Result};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum DefaultFontProvider {
@@ -30,7 +30,7 @@ pub struct Library<'a> {
 }
 
 impl<'a> Library<'a> {
-    pub fn new() -> AssResult<Self> {
+    pub fn new() -> Result<Self> {
         let lib = unsafe { ffi::ass_library_init() };
         err_if_null!(lib);
         Ok(Library {
@@ -107,19 +107,19 @@ impl<'a> Library<'a> {
         vec
     }
 
-    pub fn new_renderer(&self) -> AssResult<Renderer> {
+    pub fn new_renderer(&self) -> Result<Renderer> {
         let renderer = unsafe { ffi::ass_renderer_init(self.handle.as_ptr() as *mut _) };
         err_if_null!(renderer);
         unsafe { Ok(Renderer::new_unchecked(renderer)) }
     }
 
-    pub fn new_track(&self) -> AssResult<Track> {
+    pub fn new_track(&self) -> Result<Track> {
         let track = unsafe { ffi::ass_new_track(self.handle.as_ptr() as *mut _) };
         err_if_null!(track);
         unsafe { Ok(Track::new_unchecked(track)) }
     }
 
-    pub fn new_track_from_file(&self, filename: &str) -> AssResult<Track> {
+    pub fn new_track_from_file(&self, filename: &str) -> Result<Track> {
         let track = unsafe {
             ffi::ass_read_file(
                 self.handle.as_ptr() as *mut _,
@@ -132,7 +132,7 @@ impl<'a> Library<'a> {
         unsafe { Ok(Track::new_unchecked(track)) }
     }
 
-    pub fn new_track_from_memory(&self, data: &[u8], codepage: &str) -> AssResult<Track> {
+    pub fn new_track_from_memory(&self, data: &[u8], codepage: &str) -> Result<Track> {
         let track = unsafe {
             ffi::ass_read_memory(
                 self.handle.as_ptr() as *mut _,
