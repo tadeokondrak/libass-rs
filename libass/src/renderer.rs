@@ -1,4 +1,3 @@
-use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::os::raw::c_int;
 use std::ptr::NonNull;
@@ -73,16 +72,16 @@ impl<'library> Renderer<'library> {
 
     pub fn set_fonts(
         &mut self,
-        default_font: Option<&CStr>,
-        default_family: Option<&CStr>,
+        default_font: Option<&str>,
+        default_family: Option<&str>,
         default_font_provider: DefaultFontProvider,
-        fontconfig_config_path: Option<&CStr>,
+        fontconfig_config_path: Option<&str>,
         update_fontconfig_cache: bool,
     ) {
         macro_rules! unwrap_or_null {
             ($x:expr) => {
                 match $x {
-                    Some(s) => s.as_ptr(),
+                    Some(s) => s.as_ptr() as *const i8,
                     None => ::std::ptr::null(),
                 }
             };
