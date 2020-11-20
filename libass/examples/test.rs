@@ -3,11 +3,9 @@ use std::{env, error::Error, fs::File, io::BufWriter};
 use libass::{DefaultFontProvider, Layer, Library};
 
 fn draw_layer(layer: Layer, dst: &mut [u8]) {
-    let a = (255 - (layer.color & 0xFF)) as u8;
-    let r = (layer.color >> 24) as u8;
-    let g = (layer.color >> 16 & 0xFF) as u8;
-    let b = (layer.color >> 8 & 0xFF) as u8;
-    let pixel_base = [r, g, b, a];
+    // RGBA order
+    let mut color = layer.color.to_be_bytes();
+    color[3] = 255 - color[3]; // Inverse alpha
 
     for y in 0..layer.height as usize {
         for x in 0..layer.width as usize {
@@ -17,10 +15,10 @@ fn draw_layer(layer: Layer, dst: &mut [u8]) {
             let dst_y = y + layer.y as usize;
             let dst_p = (dst_y * 1920 + dst_x) * 4;
 
-            for i in dst_p..dst_p + 4 {
-                let off = i - dst_p;
-                let dst_orig = dst[i] as u16;
-                dst[i] = ((k * pixel_base[off] as u16 + (255 - k) * dst_orig) / 255) as u8;
+            for i in 0..4 {
+                let dst_off = dst_p + i;
+                let dst_orig = dst[dst_off] as u16;
+                dst[dst_off] = ((k * color[i] as u16 + (255 - k) * dst_orig) / 255) as u8;
             }
         }
     }
