@@ -1,4 +1,4 @@
-use std::{error::Error, env, fs::File, io::BufWriter};
+use std::{env, error::Error, fs::File, io::BufWriter};
 
 use libass::{DefaultFontProvider, Layer, Library};
 
@@ -47,12 +47,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     renderer.set_frame_size(1920, 1080);
     renderer.set_fonts(
         None,
-        Some("sans-serif"),
+        "sans-serif",
         DefaultFontProvider::Autodetect,
         None,
         false,
     );
-    
+
     let track = lib.new_track_from_file(sub_file, "UTF-8")?;
     let frame = renderer.render_frame(track, timestamp);
     let image = frame.0.unwrap();

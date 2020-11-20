@@ -40,7 +40,7 @@ impl<'a> Library<'a> {
 
     pub fn set_fonts_dir(&mut self, fonts_dir: &str) {
         let fonts_dir = CString::new(fonts_dir).unwrap();
-        unsafe { ffi::ass_set_fonts_dir(self.handle.as_ptr(), fonts_dir.as_ptr() as *const i8) }
+        unsafe { ffi::ass_set_fonts_dir(self.handle.as_ptr(), fonts_dir.as_ptr()) }
     }
 
     pub fn set_extract_fonts(&mut self, extract: bool) {
