@@ -1,4 +1,4 @@
-use std::ffi::CStr;
+use std::ffi::CString;
 use std::marker::PhantomData;
 use std::os::raw::c_int;
 use std::ptr::NonNull;
@@ -71,18 +71,25 @@ impl<'library> Renderer<'library> {
         }
     }
 
-    pub fn set_fonts(
+    pub fn set_fonts<'a>(
         &mut self,
-        default_font: Option<&CStr>,
-        default_family: Option<&CStr>,
+        default_font: impl Into<Option<&'a str>>,
+        default_family: impl Into<Option<&'a str>>,
         default_font_provider: DefaultFontProvider,
-        fontconfig_config_path: Option<&CStr>,
+        fontconfig_config_path: impl Into<Option<&'a str>>,
         update_fontconfig_cache: bool,
     ) {
+        let default_font: Option<CString> = default_font.into().map(|x| CString::new(x).unwrap());
+        let default_family: Option<CString> =
+            default_family.into().map(|x| CString::new(x).unwrap());
+        let fontconfig_config_path: Option<CString> = fontconfig_config_path
+            .into()
+            .map(|x| CString::new(x).unwrap());
+
         macro_rules! unwrap_or_null {
             ($x:expr) => {
                 match $x {
-                    Some(s) => s.as_ptr(),
+                    Some(ref s) => s.as_ptr(),
                     None => ::std::ptr::null(),
                 }
             };

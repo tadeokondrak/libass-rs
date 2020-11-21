@@ -1,14 +1,14 @@
-use std::ffi::CStr;
-use std::marker::PhantomData;
-use std::os::raw::c_int;
+use std::{ffi::CStr, os::raw::c_int};
 use std::ptr;
 use std::ptr::NonNull;
 use std::slice;
+use std::{ffi::CString, marker::PhantomData};
 
 use libass_sys as ffi;
 
 use crate::renderer::Renderer;
 use crate::track::Track;
+use crate::{err_if_null, Result};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum DefaultFontProvider {
@@ -29,19 +29,17 @@ pub struct Library<'a> {
 }
 
 impl<'a> Library<'a> {
-    pub fn new() -> Option<Self> {
+    pub fn new() -> Result<Self> {
         let lib = unsafe { ffi::ass_library_init() };
-        if lib.is_null() {
-            None
-        } else {
-            Some(Library {
-                handle: unsafe { NonNull::new_unchecked(lib) },
-                phantom: PhantomData,
-            })
-        }
+        err_if_null!(lib);
+        Ok(Library {
+            handle: unsafe { NonNull::new_unchecked(lib) },
+            phantom: PhantomData,
+        })
     }
 
-    pub fn set_fonts_dir(&mut self, fonts_dir: &CStr) {
+    pub fn set_fonts_dir(&mut self, fonts_dir: &str) {
+        let fonts_dir = CString::new(fonts_dir).unwrap();
         unsafe { ffi::ass_set_fonts_dir(self.handle.as_ptr(), fonts_dir.as_ptr()) }
     }
 
@@ -62,7 +60,8 @@ impl<'a> Library<'a> {
         };
     }
 
-    pub fn add_font(&mut self, name: &CStr, data: &[u8]) {
+    pub fn add_font(&mut self, name: &str, data: &[u8]) {
+        let name = CString::new(name).unwrap();
         unsafe {
             ffi::ass_add_font(
                 self.handle.as_ptr(),
@@ -109,56 +108,46 @@ impl<'a> Library<'a> {
         vec
     }
 
-    pub fn new_renderer(&self) -> Option<Renderer> {
+    pub fn new_renderer(&self) -> Result<Renderer> {
         let renderer = unsafe { ffi::ass_renderer_init(self.handle.as_ptr() as *mut _) };
-
-        if renderer.is_null() {
-            None
-        } else {
-            unsafe { Some(Renderer::new_unchecked(renderer)) }
-        }
+        err_if_null!(renderer);
+        unsafe { Ok(Renderer::new_unchecked(renderer)) }
     }
 
-    pub fn new_track(&self) -> Option<Track> {
+    pub fn new_track(&self) -> Result<Track> {
         let track = unsafe { ffi::ass_new_track(self.handle.as_ptr() as *mut _) };
-        if track.is_null() {
-            None
-        } else {
-            unsafe { Some(Track::new_unchecked(track)) }
-        }
+        err_if_null!(track);
+        unsafe { Ok(Track::new_unchecked(track)) }
     }
 
-    pub fn new_track_from_file(&self, filename: &CStr, codepage: &CStr) -> Option<Track> {
+    pub fn new_track_from_file(&self, filename: &str, codepage: &str) -> Result<Track> {
+        let filename = CString::new(filename).unwrap();
+        let cp = CString::new(codepage).unwrap();
         let track = unsafe {
             ffi::ass_read_file(
                 self.handle.as_ptr() as *mut _,
                 filename.as_ptr() as *mut _,
-                codepage.as_ptr() as *mut _,
+                cp.as_ptr() as *mut _,
             )
         };
 
-        if track.is_null() {
-            None
-        } else {
-            unsafe { Some(Track::new_unchecked(track)) }
-        }
+        err_if_null!(track);
+        unsafe { Ok(Track::new_unchecked(track)) }
     }
 
-    pub fn new_track_from_memory(&self, data: &[u8], codepage: &CStr) -> Option<Track> {
+    pub fn new_track_from_memory(&self, data: &[u8], codepage: &str) -> Result<Track> {
+        let cp = CString::new(codepage).unwrap();
         let track = unsafe {
             ffi::ass_read_memory(
                 self.handle.as_ptr() as *mut _,
                 data.as_ptr() as *mut _,
                 data.len(),
-                codepage.as_ptr() as *mut _,
+                cp.as_ptr() as *mut _,
             )
         };
 
-        if track.is_null() {
-            None
-        } else {
-            unsafe { Some(Track::new_unchecked(track)) }
-        }
+        err_if_null!(track);
+        unsafe { Ok(Track::new_unchecked(track)) }
     }
 }
 
