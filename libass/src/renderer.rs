@@ -44,18 +44,12 @@ impl<'library> Renderer<'library> {
         }
     }
 
-    pub fn render_frame(&mut self, track: Track, now: i64) -> (Option<Image>, Change) {
+    pub fn render_frame(&mut self, track: &mut Track, now: i64) -> (Option<Image>, Change) {
         let mut change = 0;
         let change_ptr: *mut _ = &mut change;
 
-        let image = unsafe {
-            ffi::ass_render_frame(
-                self.handle.as_ptr(),
-                track.as_ptr() as *mut _,
-                now,
-                change_ptr,
-            )
-        };
+        let image =
+            unsafe { ffi::ass_render_frame(self.handle.as_ptr(), track.as_ptr(), now, change_ptr) };
 
         let change = match change {
             0 => Change::None,

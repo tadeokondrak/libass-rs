@@ -18,7 +18,7 @@ impl<'library> Track<'library> {
         }
     }
 
-    pub(crate) fn as_ptr(&self) -> *const ffi::ass_track {
+    pub(crate) fn as_ptr(&mut self) -> *mut ffi::ass_track {
         self.handle.as_ptr()
     }
 
