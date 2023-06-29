@@ -57,9 +57,19 @@ impl Library {
         RawLibrary::new().map(|raw| Self { raw: Rc::new(raw) })
     }
 
-    pub fn set_fonts_dir(&self, fonts_dir: &str) {
-        let fonts_dir = CString::new(fonts_dir).unwrap();
-        unsafe { ffi::ass_set_fonts_dir(self.raw.as_ptr(), fonts_dir.as_ptr()) }
+    #[doc(alias = "ass_set_fonts_dir")]
+    pub fn set_fonts_dir(&self, fonts_dir: Option<&str>) {
+        match fonts_dir {
+            Some(fonts_dir) => {
+                let fonts_dir = CString::new(fonts_dir).unwrap();
+                unsafe {
+                    ffi::ass_set_fonts_dir(self.raw.as_ptr(), fonts_dir.as_ptr());
+                }
+            }
+            None => unsafe {
+                ffi::ass_set_fonts_dir(self.raw.as_ptr(), ptr::null());
+            },
+        }
     }
 
     pub fn set_extract_fonts(&self, extract: bool) {
