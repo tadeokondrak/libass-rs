@@ -1,5 +1,4 @@
 use std::ffi::CString;
-use std::marker::PhantomData;
 use std::os::raw::c_int;
 use std::ptr::NonNull;
 
@@ -7,8 +6,10 @@ use crate::image::Image;
 use crate::library::DefaultFontProvider;
 use crate::style::{OverrideBits, Style};
 use crate::track::Track;
+use crate::{Library, RawLibrary, Result};
 
 use libass_sys as ffi;
+use std::rc::Rc;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ShapingLevel {
@@ -31,17 +32,19 @@ pub enum Change {
     Content,
 }
 
-pub struct Renderer<'library> {
+pub struct Renderer {
+    _library: Rc<RawLibrary>,
     handle: NonNull<ffi::ass_renderer>,
-    phantom: PhantomData<&'library mut ffi::ass_renderer>,
 }
 
-impl<'library> Renderer<'library> {
-    pub(crate) unsafe fn new_unchecked(renderer: *mut ffi::ass_renderer) -> Self {
-        Renderer {
-            handle: NonNull::new_unchecked(renderer),
-            phantom: PhantomData,
-        }
+impl Renderer {
+    pub fn new(library: &Library) -> Result<Renderer> {
+        let renderer = unsafe { ffi::ass_renderer_init(library.raw.as_ptr() as *mut _) };
+
+        Ok(Renderer {
+            _library: Rc::clone(&library.raw),
+            handle: NonNull::new(renderer).ok_or(crate::Error)?,
+        })
     }
 
     pub fn render_frame(&mut self, track: Track, now: i64) -> (Option<Image>, Change) {
@@ -200,7 +203,7 @@ impl<'library> Renderer<'library> {
     }
 
     #[doc(hidden)]
-    pub fn update_fonts(&mut self) -> Result<(), i32> {
+    pub fn update_fonts(&mut self) -> std::result::Result<(), i32> {
         let ret = unsafe { ffi::ass_fonts_update(self.handle.as_ptr()) };
         if ret == 0 {
             Ok(())
@@ -210,7 +213,7 @@ impl<'library> Renderer<'library> {
     }
 }
 
-impl<'library> Drop for Renderer<'library> {
+impl Drop for Renderer {
     fn drop(&mut self) {
         unsafe { ffi::ass_renderer_done(self.handle.as_ptr()) }
     }

@@ -24,7 +24,7 @@ pub fn version() -> i32 {
     unsafe { ffi::ass_library_version() }
 }
 
-struct RawLibrary {
+pub(crate) struct RawLibrary {
     handle: NonNull<ffi::ass_library>,
 }
 
@@ -51,7 +51,7 @@ impl Drop for RawLibrary {
 }
 
 pub struct Library {
-    raw: Rc<RawLibrary>,
+    pub(crate) raw: Rc<RawLibrary>,
 }
 
 impl Library {
@@ -149,16 +149,6 @@ impl Library {
         }
 
         providers
-    }
-
-    pub fn new_renderer(&self) -> Result<Renderer> {
-        let renderer = unsafe { ffi::ass_renderer_init(self.raw.as_ptr() as *mut _) };
-
-        if renderer.is_null() {
-            return Err(crate::Error);
-        }
-
-        unsafe { Ok(Renderer::new_unchecked(renderer)) }
     }
 
     pub fn new_track(&self) -> Result<Track> {
