@@ -1,10 +1,8 @@
 extern crate bindgen;
 extern crate metadeps;
 
-use std::env;
-use std::fs::File;
-use std::io::Write;
 use std::path::PathBuf;
+use std::{env, fs};
 
 fn main() {
     let libs = metadeps::probe().unwrap();
@@ -39,7 +37,5 @@ fn main() {
 
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
 
-    let mut file = File::create(out_path.join("libass.rs")).unwrap();
-
-    let _ = file.write(s.as_bytes());
+    fs::write(out_path.join("libass.rs"), s).unwrap();
 }
