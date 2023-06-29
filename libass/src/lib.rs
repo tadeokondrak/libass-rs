@@ -15,20 +15,13 @@ pub use crate::style::*;
 
 #[derive(Debug)]
 pub struct Error;
+
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Libass Error")
+        f.write_str("libass error")
     }
 }
+
 impl std::error::Error for Error {}
 
 pub type Result<T> = std::result::Result<T, Error>;
-
-#[macro_export]
-macro_rules! err_if_null {
-    ($e:expr) => {
-        if $e.is_null() {
-            return Err(crate::Error);
-        }
-    };
-}

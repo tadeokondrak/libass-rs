@@ -1,14 +1,14 @@
-use std::{ffi::CStr, os::raw::c_int};
 use std::ptr;
 use std::ptr::NonNull;
 use std::slice;
+use std::{ffi::CStr, os::raw::c_int};
 use std::{ffi::CString, marker::PhantomData};
 
 use libass_sys as ffi;
 
 use crate::renderer::Renderer;
 use crate::track::Track;
-use crate::{err_if_null, Result};
+use crate::Result;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum DefaultFontProvider {
@@ -31,7 +31,11 @@ pub struct Library<'a> {
 impl<'a> Library<'a> {
     pub fn new() -> Result<Self> {
         let lib = unsafe { ffi::ass_library_init() };
-        err_if_null!(lib);
+
+        if lib.is_null() {
+            return Err(crate::Error);
+        }
+
         Ok(Library {
             handle: unsafe { NonNull::new_unchecked(lib) },
             phantom: PhantomData,
@@ -110,13 +114,21 @@ impl<'a> Library<'a> {
 
     pub fn new_renderer(&self) -> Result<Renderer> {
         let renderer = unsafe { ffi::ass_renderer_init(self.handle.as_ptr() as *mut _) };
-        err_if_null!(renderer);
+
+        if renderer.is_null() {
+            return Err(crate::Error);
+        }
+
         unsafe { Ok(Renderer::new_unchecked(renderer)) }
     }
 
     pub fn new_track(&self) -> Result<Track> {
         let track = unsafe { ffi::ass_new_track(self.handle.as_ptr() as *mut _) };
-        err_if_null!(track);
+
+        if track.is_null() {
+            return Err(crate::Error);
+        }
+
         unsafe { Ok(Track::new_unchecked(track)) }
     }
 
@@ -131,7 +143,10 @@ impl<'a> Library<'a> {
             )
         };
 
-        err_if_null!(track);
+        if track.is_null() {
+            return Err(crate::Error);
+        }
+
         unsafe { Ok(Track::new_unchecked(track)) }
     }
 
@@ -146,7 +161,10 @@ impl<'a> Library<'a> {
             )
         };
 
-        err_if_null!(track);
+        if track.is_null() {
+            return Err(crate::Error);
+        }
+
         unsafe { Ok(Track::new_unchecked(track)) }
     }
 }
