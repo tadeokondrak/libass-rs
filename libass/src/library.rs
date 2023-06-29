@@ -44,7 +44,9 @@ impl RawLibrary {
 
 impl Drop for RawLibrary {
     fn drop(&mut self) {
-        unsafe { ffi::ass_library_done(self.handle.as_ptr()) }
+        unsafe {
+            ffi::ass_library_done(self.handle.as_ptr());
+        }
     }
 }
 
@@ -53,6 +55,7 @@ pub struct Library {
 }
 
 impl Library {
+    #[doc(alias = "ass_library_init")]
     pub fn new() -> Result<Self> {
         RawLibrary::new().map(|raw| Self { raw: Rc::new(raw) })
     }
@@ -72,8 +75,11 @@ impl Library {
         }
     }
 
+    #[doc(alias = "ass_set_extract_fonts")]
     pub fn set_extract_fonts(&self, extract: bool) {
-        unsafe { ffi::ass_set_extract_fonts(self.raw.as_ptr(), extract as c_int) }
+        unsafe {
+            ffi::ass_set_extract_fonts(self.raw.as_ptr(), extract as c_int);
+        }
     }
 
     #[doc(alias = "ass_set_style_overrides")]
@@ -90,10 +96,11 @@ impl Library {
             .map(|c_string| c_string.as_ptr().cast_mut())
             .collect::<Vec<*mut c_char>>();
         unsafe {
-            ffi::ass_set_style_overrides(self.raw.as_ptr(), c_strs.as_slice().as_ptr().cast_mut())
-        };
+            ffi::ass_set_style_overrides(self.raw.as_ptr(), c_strs.as_slice().as_ptr().cast_mut());
+        }
     }
 
+    #[doc(alias = "ass_add_font")]
     pub fn add_font(&self, name: &str, data: &[u8]) {
         let name = CString::new(name).unwrap();
         unsafe {
@@ -102,12 +109,15 @@ impl Library {
                 name.as_ptr() as *mut _,
                 data.as_ptr() as *mut _,
                 data.len() as c_int,
-            )
+            );
         }
     }
 
+    #[doc(alias = "ass_clear_fonts")]
     pub fn clear_fonts(&self) {
-        unsafe { ffi::ass_clear_fonts(self.raw.as_ptr()) }
+        unsafe {
+            ffi::ass_clear_fonts(self.raw.as_ptr());
+        }
     }
 
     #[doc(alias = "ass_get_available_font_providers")]
