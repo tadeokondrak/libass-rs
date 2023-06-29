@@ -1,4 +1,4 @@
-use std::ffi::CString;
+use std::ffi::{c_char, CString};
 use std::ptr;
 use std::ptr::NonNull;
 use std::slice;
@@ -76,16 +76,21 @@ impl Library {
         unsafe { ffi::ass_set_extract_fonts(self.raw.as_ptr(), extract as c_int) }
     }
 
-    pub fn set_style_overrides(&self, list: &[&CStr]) {
+    #[doc(alias = "ass_set_style_overrides")]
+    pub fn set_style_overrides<'a, I>(&self, list: I)
+    where
+        I: IntoIterator<Item = &'a str>,
+    {
+        let c_strings = list
+            .into_iter()
+            .map(|s| CString::new(s).unwrap())
+            .collect::<Vec<CString>>();
+        let c_strs = c_strings
+            .iter()
+            .map(|c_string| c_string.as_ptr().cast_mut())
+            .collect::<Vec<*mut c_char>>();
         unsafe {
-            ffi::ass_set_style_overrides(
-                self.raw.as_ptr(),
-                list.iter()
-                    .map(|x| x.as_ptr())
-                    .collect::<Vec<_>>()
-                    .as_slice()
-                    .as_ptr() as *mut *mut _,
-            )
+            ffi::ass_set_style_overrides(self.raw.as_ptr(), c_strs.as_slice().as_ptr().cast_mut())
         };
     }
 
