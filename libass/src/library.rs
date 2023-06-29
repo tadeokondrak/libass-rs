@@ -57,16 +57,16 @@ impl Library {
         RawLibrary::new().map(|raw| Self { raw: Rc::new(raw) })
     }
 
-    pub fn set_fonts_dir(&mut self, fonts_dir: &str) {
+    pub fn set_fonts_dir(&self, fonts_dir: &str) {
         let fonts_dir = CString::new(fonts_dir).unwrap();
         unsafe { ffi::ass_set_fonts_dir(self.raw.as_ptr(), fonts_dir.as_ptr()) }
     }
 
-    pub fn set_extract_fonts(&mut self, extract: bool) {
+    pub fn set_extract_fonts(&self, extract: bool) {
         unsafe { ffi::ass_set_extract_fonts(self.raw.as_ptr(), extract as c_int) }
     }
 
-    pub fn set_style_overrides(&mut self, list: &[&CStr]) {
+    pub fn set_style_overrides(&self, list: &[&CStr]) {
         unsafe {
             ffi::ass_set_style_overrides(
                 self.raw.as_ptr(),
@@ -79,7 +79,7 @@ impl Library {
         };
     }
 
-    pub fn add_font(&mut self, name: &str, data: &[u8]) {
+    pub fn add_font(&self, name: &str, data: &[u8]) {
         let name = CString::new(name).unwrap();
         unsafe {
             ffi::ass_add_font(
@@ -91,11 +91,11 @@ impl Library {
         }
     }
 
-    pub fn clear_fonts(&mut self) {
+    pub fn clear_fonts(&self) {
         unsafe { ffi::ass_clear_fonts(self.raw.as_ptr()) }
     }
 
-    pub fn get_available_font_providers(&mut self) -> Vec<DefaultFontProvider> {
+    pub fn get_available_font_providers(&self) -> Vec<DefaultFontProvider> {
         let mut providers: *mut ffi::ASS_DefaultFontProvider = ptr::null_mut();
         let providers_ptr = &mut providers as *mut *mut ffi::ASS_DefaultFontProvider;
 
