@@ -1,8 +1,8 @@
-use std::ffi::{c_char, CString};
+use std::ffi::{c_char, c_void, CString};
+use std::os::raw::c_int;
 use std::ptr;
 use std::ptr::NonNull;
 use std::slice;
-use std::{ffi::CStr, os::raw::c_int};
 
 use libass_sys as ffi;
 
@@ -110,36 +110,35 @@ impl Library {
         unsafe { ffi::ass_clear_fonts(self.raw.as_ptr()) }
     }
 
-    pub fn get_available_font_providers(&self) -> Vec<DefaultFontProvider> {
-        let mut providers: *mut ffi::ASS_DefaultFontProvider = ptr::null_mut();
-        let providers_ptr = &mut providers as *mut *mut ffi::ASS_DefaultFontProvider;
-
+    #[doc(alias = "ass_get_available_font_providers")]
+    pub fn available_font_providers(&self) -> Vec<DefaultFontProvider> {
+        let mut ptr: *mut ffi::ASS_DefaultFontProvider = ptr::null_mut();
         let mut size: usize = 0;
-        let size_ptr = &mut size as *mut usize;
 
         unsafe {
-            ffi::ass_get_available_font_providers(self.raw.as_ptr(), providers_ptr, size_ptr)
-        };
-
-        let providers_slice = unsafe { slice::from_raw_parts(providers, size) };
-
-        let mut vec: Vec<DefaultFontProvider> = Vec::with_capacity(size);
-
-        for provider in providers_slice {
-            use crate::library::DefaultFontProvider::*;
-            use ffi::ASS_DefaultFontProvider::*;
-            vec.push(match provider {
-                ASS_FONTPROVIDER_NONE => None,
-                ASS_FONTPROVIDER_AUTODETECT => Autodetect,
-                ASS_FONTPROVIDER_CORETEXT => CoreText,
-                ASS_FONTPROVIDER_FONTCONFIG => Fontconfig,
-                ASS_FONTPROVIDER_DIRECTWRITE => DirectWrite,
-            })
+            ffi::ass_get_available_font_providers(self.raw.as_ptr(), &mut ptr, &mut size);
         }
 
-        unsafe { libc::free(providers as *mut libc::c_void) };
+        let providers = unsafe { slice::from_raw_parts(ptr, size) }
+            .iter()
+            .map(|provider| {
+                use crate::library::DefaultFontProvider::*;
+                use ffi::ASS_DefaultFontProvider::*;
+                match provider {
+                    ASS_FONTPROVIDER_NONE => None,
+                    ASS_FONTPROVIDER_AUTODETECT => Autodetect,
+                    ASS_FONTPROVIDER_CORETEXT => CoreText,
+                    ASS_FONTPROVIDER_FONTCONFIG => Fontconfig,
+                    ASS_FONTPROVIDER_DIRECTWRITE => DirectWrite,
+                }
+            })
+            .collect();
 
-        vec
+        unsafe {
+            libc::free(ptr.cast::<c_void>());
+        }
+
+        providers
     }
 
     pub fn new_renderer(&self) -> Result<Renderer> {
