@@ -1,14 +1,15 @@
+use std::ffi::CString;
 use std::ptr;
 use std::ptr::NonNull;
 use std::slice;
 use std::{ffi::CStr, os::raw::c_int};
-use std::{ffi::CString, marker::PhantomData};
 
 use libass_sys as ffi;
 
 use crate::renderer::Renderer;
 use crate::track::Track;
 use crate::Result;
+use std::rc::Rc;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum DefaultFontProvider {
@@ -23,38 +24,52 @@ pub fn version() -> i32 {
     unsafe { ffi::ass_library_version() }
 }
 
-pub struct Library<'a> {
+struct RawLibrary {
     handle: NonNull<ffi::ass_library>,
-    phantom: PhantomData<&'a mut ffi::ass_library>,
 }
 
-impl<'a> Library<'a> {
+impl RawLibrary {
     pub fn new() -> Result<Self> {
         let lib = unsafe { ffi::ass_library_init() };
 
-        if lib.is_null() {
-            return Err(crate::Error);
-        }
-
-        Ok(Library {
-            handle: unsafe { NonNull::new_unchecked(lib) },
-            phantom: PhantomData,
+        Ok(RawLibrary {
+            handle: NonNull::new(lib).ok_or(crate::Error)?,
         })
+    }
+
+    pub fn as_ptr(&self) -> *mut ffi::ass_library {
+        self.handle.as_ptr()
+    }
+}
+
+impl Drop for RawLibrary {
+    fn drop(&mut self) {
+        unsafe { ffi::ass_library_done(self.handle.as_ptr()) }
+    }
+}
+
+pub struct Library {
+    raw: Rc<RawLibrary>,
+}
+
+impl Library {
+    pub fn new() -> Result<Self> {
+        RawLibrary::new().map(|raw| Self { raw: Rc::new(raw) })
     }
 
     pub fn set_fonts_dir(&mut self, fonts_dir: &str) {
         let fonts_dir = CString::new(fonts_dir).unwrap();
-        unsafe { ffi::ass_set_fonts_dir(self.handle.as_ptr(), fonts_dir.as_ptr()) }
+        unsafe { ffi::ass_set_fonts_dir(self.raw.as_ptr(), fonts_dir.as_ptr()) }
     }
 
     pub fn set_extract_fonts(&mut self, extract: bool) {
-        unsafe { ffi::ass_set_extract_fonts(self.handle.as_ptr(), extract as c_int) }
+        unsafe { ffi::ass_set_extract_fonts(self.raw.as_ptr(), extract as c_int) }
     }
 
     pub fn set_style_overrides(&mut self, list: &[&CStr]) {
         unsafe {
             ffi::ass_set_style_overrides(
-                self.handle.as_ptr(),
+                self.raw.as_ptr(),
                 list.iter()
                     .map(|x| x.as_ptr())
                     .collect::<Vec<_>>()
@@ -68,7 +83,7 @@ impl<'a> Library<'a> {
         let name = CString::new(name).unwrap();
         unsafe {
             ffi::ass_add_font(
-                self.handle.as_ptr(),
+                self.raw.as_ptr(),
                 name.as_ptr() as *mut _,
                 data.as_ptr() as *mut _,
                 data.len() as c_int,
@@ -77,7 +92,7 @@ impl<'a> Library<'a> {
     }
 
     pub fn clear_fonts(&mut self) {
-        unsafe { ffi::ass_clear_fonts(self.handle.as_ptr()) }
+        unsafe { ffi::ass_clear_fonts(self.raw.as_ptr()) }
     }
 
     pub fn get_available_font_providers(&mut self) -> Vec<DefaultFontProvider> {
@@ -88,7 +103,7 @@ impl<'a> Library<'a> {
         let size_ptr = &mut size as *mut usize;
 
         unsafe {
-            ffi::ass_get_available_font_providers(self.handle.as_ptr(), providers_ptr, size_ptr)
+            ffi::ass_get_available_font_providers(self.raw.as_ptr(), providers_ptr, size_ptr)
         };
 
         let providers_slice = unsafe { slice::from_raw_parts(providers, size) };
@@ -113,7 +128,7 @@ impl<'a> Library<'a> {
     }
 
     pub fn new_renderer(&self) -> Result<Renderer> {
-        let renderer = unsafe { ffi::ass_renderer_init(self.handle.as_ptr() as *mut _) };
+        let renderer = unsafe { ffi::ass_renderer_init(self.raw.as_ptr() as *mut _) };
 
         if renderer.is_null() {
             return Err(crate::Error);
@@ -123,7 +138,7 @@ impl<'a> Library<'a> {
     }
 
     pub fn new_track(&self) -> Result<Track> {
-        let track = unsafe { ffi::ass_new_track(self.handle.as_ptr() as *mut _) };
+        let track = unsafe { ffi::ass_new_track(self.raw.as_ptr() as *mut _) };
 
         if track.is_null() {
             return Err(crate::Error);
@@ -137,7 +152,7 @@ impl<'a> Library<'a> {
         let cp = CString::new(codepage).unwrap();
         let track = unsafe {
             ffi::ass_read_file(
-                self.handle.as_ptr() as *mut _,
+                self.raw.as_ptr() as *mut _,
                 filename.as_ptr() as *mut _,
                 cp.as_ptr() as *mut _,
             )
@@ -154,7 +169,7 @@ impl<'a> Library<'a> {
         let cp = CString::new(codepage).unwrap();
         let track = unsafe {
             ffi::ass_read_memory(
-                self.handle.as_ptr() as *mut _,
+                self.raw.as_ptr() as *mut _,
                 data.as_ptr() as *mut _,
                 data.len(),
                 cp.as_ptr() as *mut _,
@@ -166,11 +181,5 @@ impl<'a> Library<'a> {
         }
 
         unsafe { Ok(Track::new_unchecked(track)) }
-    }
-}
-
-impl<'a> Drop for Library<'a> {
-    fn drop(&mut self) {
-        unsafe { ffi::ass_library_done(self.handle.as_ptr()) }
     }
 }
