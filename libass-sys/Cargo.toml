@@ -10,7 +10,7 @@ repository = "https://github.com/tadeokondrak/libass-rs"
 categories = [ "external-ffi-bindings" ]
 
 [build-dependencies]
-bindgen = "0.50"
+bindgen = "0.66"
 metadeps = "1.1"
 
 [package.metadata.pkg-config]
